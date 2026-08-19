@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  ANDROID_ABI: arm64-v8a
+  ANDROID_PLATFORM: android-24
+  NDK_VERSION: 28.2.13676358
+  CMAKE_VERSION: 3.22.1
+
+jobs:
+  release:
+    name: Build LeviPack release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "ndk;${NDK_VERSION}" \
+            "cmake;${CMAKE_VERSION}"
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(
+              python3 -c \
+                'import json; print(json.load(open("manifest.json"))["version"])'
+            )"
+          fi
+
+          manifest_version="$(
+            python3 -c \
+              'import json; print(json.load(open("manifest.json"))["version"])'
+          )"
+
+          test "${version}" = "${manifest_version}"
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Configure
+        shell: bash
+        run: |
+          "${ANDROID_SDK_ROOT}/cmake/${CMAKE_VERSION}/bin/cmake" \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_MAKE_PROGRAM="${ANDROID_SDK_ROOT}/cmake/${CMAKE_VERSION}/bin/ninja" \
+            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_SDK_ROOT}/ndk/${NDK_VERSION}/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${ANDROID_ABI}" \
+            -DANDROID_PLATFORM="${ANDROID_PLATFORM}"
+
+      - name: Build
+        shell: bash
+        run: |
+          "${ANDROID_SDK_ROOT}/cmake/${CMAKE_VERSION}/bin/cmake" \
+            --build build \
+            --target levi_visuals \
+            --parallel 2
+
+      - name: Validate native library
+        shell: bash
+        run: |
+          test -f build/liblevi_visuals.so
+
+          readelf -h build/liblevi_visuals.so \
+            | grep -q "AArch64"
+
+          readelf -Ws build/liblevi_visuals.so \
+            | grep -q "PLGetModRegistration"
+
+          readelf -d build/liblevi_visuals.so \
+            | grep -q "libpreloader.so"
+
+          alignments="$(
+            readelf -lW build/liblevi_visuals.so \
+              | awk '$1 == "LOAD" {print $NF}' \
+              | sort -u
+          )"
+
+          test "${alignments}" = "0x4000"
+
+      - name: Package release
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p package
+
+          cp manifest.json package/manifest.json
+          cp build/liblevi_visuals.so package/liblevi_visuals.so
+
+          cd package
+          zip -r "../LeviVisuals-${RELEASE_VERSION}.levipack" .
+
+      - name: Publish GitHub release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: LeviVisuals-*.levipack
+          generate_release_notes: true
+
+      - name: Upload manual release artifact
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LeviVisuals-${{ steps.version.outputs.version }}
+          path: LeviVisuals-*.levipack
+          if-no-files-found: error
