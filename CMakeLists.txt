@@ -26,7 +26,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FetchContent)
 
-# SDK resmi Levi. Versinya dikunci agar build konsisten.
+# Commit preloader yang digunakan oleh LeviLauncher Android v1.5.15.
+# Pin commit ini untuk menjaga kesesuaian ABI ModMenu.
 FetchContent_Declare(
     preloader_android
 
@@ -34,29 +35,24 @@ FetchContent_Declare(
         https://github.com/LiteLDev/preloader-android.git
 
     GIT_TAG
-        0.2.3
+        a2a7f29a8b690fd83fd8f331ea925d322ab1754c
 
-    GIT_SHALLOW
+    GIT_PROGRESS
         TRUE
 )
 
 FetchContent_MakeAvailable(preloader_android)
 
-# pl::Logger memakai __android_log_print dari Android liblog.
-target_link_libraries(
-    levi_visuals
-
-    PRIVATE
-        preloader
-
-        nlohmann_json::nlohmann_json
-        Boost::pfr
-        magic_enum::magic_enum
-        fmt::fmt
-
-        ${ANDROID_LOG_LIBRARY}
+# Android logging library.
+# Dibutuhkan oleh pl::Logger dan __android_log_print.
+find_library(
+    ANDROID_LOG_LIBRARY
+    log
+    REQUIRED
 )
 
+# Definisi target harus dibuat sebelum target_include_directories,
+# target_compile_options, target_link_options dan target_link_libraries.
 add_library(
     levi_visuals
     SHARED
@@ -102,7 +98,7 @@ target_compile_options(
         -fdata-sections
 )
 
-# Kompatibilitas Android dengan page size 16 KiB.
+# Kompatibilitas Android 16 KiB page size.
 target_link_options(
     levi_visuals
 
