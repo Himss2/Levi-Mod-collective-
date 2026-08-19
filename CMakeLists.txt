@@ -29,15 +29,25 @@ include(FetchContent)
 # SDK resmi Levi. Versinya dikunci agar build konsisten.
 FetchContent_Declare(
     preloader_android
+
     GIT_REPOSITORY
         https://github.com/LiteLDev/preloader-android.git
+
     GIT_TAG
         0.2.3
+
     GIT_SHALLOW
         TRUE
 )
 
 FetchContent_MakeAvailable(preloader_android)
+
+# pl::Logger memakai __android_log_print dari Android liblog.
+find_library(
+    ANDROID_LOG_LIBRARY
+    log
+    REQUIRED
+)
 
 add_library(
     levi_visuals
@@ -57,6 +67,7 @@ add_library(
 
 set_target_properties(
     levi_visuals
+
     PROPERTIES
         OUTPUT_NAME "levi_visuals"
 )
@@ -102,4 +113,6 @@ target_link_libraries(
         Boost::pfr
         magic_enum::magic_enum
         fmt::fmt
+
+        ${ANDROID_LOG_LIBRARY}
 )
