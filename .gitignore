@@ -1,0 +1,32 @@
+# Android / CMake
+build/
+.cxx/
+.externalNativeBuild/
+local.properties
+
+# Generated packages and binaries
+package/
+*.levipack
+*.so
+*.o
+*.a
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+.cache/
+
+# Reverse-engineering inputs
+libminecraftpe.so
+libatlas.so
+*.apk
