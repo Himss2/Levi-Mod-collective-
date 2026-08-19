@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(
     LeviVisuals
-    VERSION 0.1.0
+    VERSION 0.1.1
     LANGUAGES CXX
 )
 
@@ -43,10 +43,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(preloader_android)
 
 # pl::Logger memakai __android_log_print dari Android liblog.
-find_library(
-    ANDROID_LOG_LIBRARY
-    log
-    REQUIRED
+target_link_libraries(
+    levi_visuals
+
+    PRIVATE
+        preloader
+
+        nlohmann_json::nlohmann_json
+        Boost::pfr
+        magic_enum::magic_enum
+        fmt::fmt
+
+        ${ANDROID_LOG_LIBRARY}
 )
 
 add_library(
