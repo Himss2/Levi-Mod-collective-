@@ -2,7 +2,7 @@
   "type": "preload-native",
   "name": "Levi Visuals",
   "author": "Himss",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "entry": "liblevi_visuals.so",
   "description": "ViewModel, Freelook and Item Physics for LeviLauncher Android.",
   "minecraft_versions": [
